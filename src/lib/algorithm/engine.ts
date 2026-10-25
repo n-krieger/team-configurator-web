@@ -27,10 +27,14 @@ export interface EnginePlayer {
   strength: number;
 }
 
-/** Locked rounds keep their teams; open rounds are (re)generated. */
+/**
+ * Locked rounds keep their teams; open rounds are (re)generated. An open round
+ * with `start` teams begins the first run from them instead of random teams
+ * (ignored if they don't match nTeams/attendees).
+ */
 export type EngineRound =
   | { locked: true; teams: string[][] }
-  | { locked: false; nTeams: number; attendees: string[] };
+  | { locked: false; nTeams: number; attendees: string[]; start?: string[][] };
 
 export interface EngineInput {
   players: EnginePlayer[];
@@ -241,14 +245,21 @@ export function solve(input: EngineInput, options: SolveOptions = {}): string[][
 
   const open = rounds.flatMap((r, i) => (r.locked ? [] : [i]));
   const attendeesOf = rounds.map((r) => (r.locked ? [] : r.attendees.map(lookup)));
-  const initState = (): State =>
+  const usableStart = (r: EngineRound): r is Extract<EngineRound, { locked: false }> & { start: string[][] } => {
+    if (r.locked || !r.start || r.start.length !== r.nTeams) return false;
+    const ids = r.start.flat();
+    return ids.length === r.attendees.length && new Set(ids).size === ids.length && ids.every((id) => r.attendees.includes(id));
+  };
+  const initState = (fromStart: boolean): State =>
     rounds.map((r, i) =>
       r.locked
         ? r.teams.map((team) => team.map(lookup))
-        : initRound(attendeesOf[i], r.nTeams, positionOf, nPositions, rng),
+        : fromStart && usableStart(r)
+          ? r.start.map((team) => team.map(lookup))
+          : initRound(attendeesOf[i], r.nTeams, positionOf, nPositions, rng),
     );
 
-  let state = initState();
+  let state = initState(true);
   const evaluator = new Evaluator(players.length, strengths, weights, countTotalPairs(state));
   const toIds = (s: State) => s.map((teams) => teams.map((team) => team.map((p) => players[p].id)));
 
@@ -298,7 +309,7 @@ export function solve(input: EngineInput, options: SolveOptions = {}): string[][
   let best = structuredClone(state);
   options.onProgress?.({ run: 1, runs, bestFitness });
   for (let run = 2; run <= runs; run++) {
-    state = initState();
+    state = initState(false);
     const fitness = optimiseRun();
     if (fitness > bestFitness) {
       bestFitness = fitness;

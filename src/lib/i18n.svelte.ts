@@ -138,7 +138,18 @@ const en = {
   present: 'Present',
   all: 'All',
   none: 'None',
-  roundChangeClears: 'Changing players or teams clears the generated teams of this round.',
+  roundChangeClears:
+    'Changing the number of teams rebuilds this round. Attendance changes are fitted into the current teams.',
+  optimiseAll: 'Optimise all rounds',
+  optimiseAllHint:
+    'Improves the current teams of all unlocked rounds together, starting from them. Useful after attendance changes in several rounds. Locked rounds stay unchanged but still count.',
+  adjustedNotice: 'Attendance changed in {rounds}. Optimise all rounds to rebalance the teams.',
+  adjusted: 'Adjusted',
+  whoWithWhom: 'Who played with whom',
+  neverWith: 'Never with',
+  togetherWith: '{k}× with',
+  playedWithAll: 'Played with everyone at least once.',
+  neverCount: '{n} never',
 
   // import
   chooseFile: 'Choose file',
@@ -318,7 +329,18 @@ const de: Record<MessageKey, string> = {
   present: 'Anwesend',
   all: 'Alle',
   none: 'Keine',
-  roundChangeClears: 'Änderungen an Spielern oder Teams löschen die Teams dieser Runde.',
+  roundChangeClears:
+    'Eine andere Anzahl Teams bildet die Runde neu. Änderungen der Anwesenheit werden in die bestehenden Teams eingepasst.',
+  optimiseAll: 'Alle Runden optimieren',
+  optimiseAllHint:
+    'Verbessert die aktuellen Teams aller offenen Runden gemeinsam und geht dabei von ihnen aus. Nützlich nach Änderungen der Anwesenheit in mehreren Runden. Gesperrte Runden bleiben unverändert, zählen aber mit.',
+  adjustedNotice: 'Anwesenheit geändert in {rounds}. Optimiere alle Runden, um die Teams auszugleichen.',
+  adjusted: 'Angepasst',
+  whoWithWhom: 'Wer mit wem',
+  neverWith: 'Nie mit',
+  togetherWith: '{k}× mit',
+  playedWithAll: 'Hat mit allen mindestens einmal gespielt.',
+  neverCount: '{n} nie',
 
   chooseFile: 'Datei wählen',
   orPaste: 'Oder Inhalt einfügen',

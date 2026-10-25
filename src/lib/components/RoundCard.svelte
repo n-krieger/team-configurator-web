@@ -32,7 +32,10 @@
 <section class="card" class:locked={round.locked}>
   <div class="row">
     <div class="spacer">
-      <h2>{t('round', { n: index + 1 })}</h2>
+      <h2>
+        {t('round', { n: index + 1 })}
+        {#if round.adjusted}<span class="adjusted">{t('adjusted')}</span>{/if}
+      </h2>
       <div class="muted small">
         {t('teamsCount', { n: round.nTeams })} · {t('attending', { n: present, m: plan.roster.players.length })}
       </div>
@@ -95,6 +98,15 @@
 <style>
   .locked {
     border-color: var(--accent);
+  }
+  .adjusted {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    vertical-align: middle;
+    background: var(--warn-soft);
+    color: var(--warn);
   }
   .teams {
     display: grid;

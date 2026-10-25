@@ -113,6 +113,7 @@ export function planToCsv(plan: Plan, { delimiter, teamLabel }: ExportOptions): 
       ['locked', round.locked ? 'yes' : 'no'],
       ['absent', ...round.absent.map((id) => name.get(id) ?? id)],
     );
+    if (round.adjusted) rows.push(['adjusted', 'yes']);
     if (round.teams.length > 0) {
       rows.push(round.teams.map((_, i) => `${teamLabel} ${i + 1}`));
       const height = Math.max(...round.teams.map((t) => t.length));
@@ -187,6 +188,8 @@ function positionResolver(positions: Position[]): (value: string) => string {
   };
 }
 
+const yes = (cells: string[] | undefined) => /^(yes|ja|true|1)$/i.test(cells?.[0] ?? '');
+
 function readPlan(secs: ReturnType<typeof sections>): Plan {
   const meta = keyValues(secs.find((s) => s.name === 'plan')?.rows ?? []);
   const roster = readRoster(secs);
@@ -201,7 +204,7 @@ function readPlan(secs: ReturnType<typeof sections>): Plan {
   const rounds: Round[] = secs
     .filter((s) => s.name === 'round')
     .map((s) => {
-      const headerIndex = s.rows.findIndex((r) => !['teams', 'locked', 'absent'].includes(r[0].toLowerCase()));
+      const headerIndex = s.rows.findIndex((r) => !['teams', 'locked', 'absent', 'adjusted'].includes(r[0].toLowerCase()));
       const info = keyValues(headerIndex === -1 ? s.rows : s.rows.slice(0, headerIndex));
       const table = headerIndex === -1 ? [] : s.rows.slice(headerIndex + 1);
       const width = headerIndex === -1 ? 0 : s.rows[headerIndex].length;
@@ -214,7 +217,8 @@ function readPlan(secs: ReturnType<typeof sections>): Plan {
         nTeams,
         absent: (info.get('absent') ?? []).filter(Boolean).map(resolve),
         teams,
-        locked: /^(yes|ja|true|1)$/i.test(info.get('locked')?.[0] ?? '') && teams.length > 0,
+        locked: yes(info.get('locked')) && teams.length > 0,
+        ...(yes(info.get('adjusted')) && teams.length > 0 ? { adjusted: true } : {}),
       };
     });
 

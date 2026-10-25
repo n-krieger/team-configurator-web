@@ -10,11 +10,14 @@ let current: { worker: Worker; reject: (reason: Error) => void } | undefined;
 
 export class Cancelled extends Error {}
 
-/** Generates the rounds `targets` of `plan` in a worker and writes the teams into the plan. */
-export function generate(plan: Plan, targets: number[]): Promise<void> {
+/**
+ * Generates the rounds `targets` of `plan` in a worker and writes the teams
+ * into the plan. `fromCurrent` improves the existing teams instead.
+ */
+export function generate(plan: Plan, targets: number[], { fromCurrent = false } = {}): Promise<void> {
   cancelGeneration();
   // plain data: reactive proxies can't be posted to a worker
-  const { input, roundIndex } = engineInput($state.snapshot(plan), targets);
+  const { input, roundIndex } = engineInput($state.snapshot(plan), targets, { fromCurrent });
   const worker = new Worker(new URL('./algorithm/worker.ts', import.meta.url), { type: 'module' });
   Object.assign(generation, { running: true, run: 0, runs: input.restarts + 1 });
 
@@ -33,7 +36,10 @@ export function generate(plan: Plan, targets: number[]): Promise<void> {
       } else if (msg.type === 'done') {
         msg.rounds.forEach((teams, k) => {
           const i = roundIndex[k];
-          if (targets.includes(i)) plan.rounds[i].teams = teams;
+          if (targets.includes(i)) {
+            plan.rounds[i].teams = teams;
+            plan.rounds[i].adjusted = false;
+          }
         });
         plan.updatedAt = now();
         finish();

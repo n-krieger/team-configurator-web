@@ -84,7 +84,8 @@
       roster.players.push({
         id: newId(),
         name: line.name,
-        position: line.position ?? roster.positions[0].id,
+        // most players are field players: default to the last position (e.g. forward)
+        position: line.position ?? roster.positions[roster.positions.length - 1].id,
         strength: line.strength ?? 1,
       });
     }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../i18n.svelte';
+  import { fitAttendance } from '../plan';
   import type { Plan } from '../types';
   import Dialog from './Dialog.svelte';
   import Icon from './Icon.svelte';
@@ -34,14 +35,18 @@
   function save() {
     const round = plan.rounds[index];
     const absent = plan.roster.players.filter((p) => !present[p.id]).map((p) => p.id);
-    const changed = round.nTeams !== nTeams || absent.join() !== round.absent.join();
-    if (changed) {
+    const teamsChanged = round.nTeams !== nTeams;
+    const attendanceChanged = absent.join() !== round.absent.join();
+    if (teamsChanged || (attendanceChanged && round.teams.length === 0)) {
       round.nTeams = nTeams;
       round.absent = absent;
       round.teams = [];
       round.locked = false;
-      plan.updatedAt = new Date().toISOString();
+      round.adjusted = false;
+    } else if (attendanceChanged) {
+      fitAttendance(plan, round, absent);
     }
+    if (teamsChanged || attendanceChanged) plan.updatedAt = new Date().toISOString();
     open = false;
   }
 </script>

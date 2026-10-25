@@ -3,6 +3,7 @@
   import Dialog from '../lib/components/Dialog.svelte';
   import ExportButtons from '../lib/components/ExportButtons.svelte';
   import Icon from '../lib/components/Icon.svelte';
+  import PairOverview from '../lib/components/PairOverview.svelte';
   import PlanSettingsForm from '../lib/components/PlanSettingsForm.svelte';
   import RoundCard from '../lib/components/RoundCard.svelte';
   import RoundEditor from '../lib/components/RoundEditor.svelte';
@@ -14,6 +15,7 @@
     exportOptions,
     isGenerated,
     newRound,
+    pairsByCount,
     planStats,
     planText,
     playerMap,
@@ -29,20 +31,25 @@
   let { plan }: { plan: Plan } = $props();
 
   const stats = $derived(planStats(plan));
-  const repeated = $derived(
-    stats
-      ? Object.entries(stats.appearances)
-          .map(([k, n]) => [Number(k), n] as const)
-          .filter(([k]) => k > 1)
-          .sort((a, b) => a[0] - b[0])
-      : [],
-  );
+  /** Summary lines: never together (k = 0) and repeated pairs (k ≥ 2); pairs are named when there are at most 3. */
+  const pairLines = $derived.by(() => {
+    if (!stats) return [];
+    return [...pairsByCount(plan)]
+      .filter(([k]) => k !== 1)
+      .sort((a, b) => a[0] - b[0])
+      .map(([k, pairs]) => ({
+        k,
+        text: k === 0 ? t('statsMissing', { n: pairs.length }) : t('statsRepeated', { n: pairs.length, k }),
+        names: pairs.length <= 3 ? pairs.map(([a, b]) => `${a.name} & ${b.name}`).join(', ') : '',
+      }));
+  });
   const openRounds = $derived(plan.rounds.flatMap((r, i) => (r.locked ? [] : [i])));
+  const adjustedRounds = $derived(plan.rounds.flatMap((r, i) => (r.adjusted && !r.locked ? [i] : [])));
   const anyGenerated = $derived(plan.rounds.some(isGenerated));
 
   // ---- generating
 
-  async function run(targets: number[]) {
+  async function run(targets: number[], { fromCurrent = false } = {}) {
     for (const i of targets) {
       const round = plan.rounds[i];
       if (round.nTeams > attendees(plan, round).length) {
@@ -52,7 +59,7 @@
     }
     selected = undefined;
     try {
-      await generate(plan, targets);
+      await generate(plan, targets, { fromCurrent });
     } catch (error) {
       if (!(error instanceof Cancelled)) {
         showToast(t('generateFailed', { msg: error instanceof Error ? error.message : String(error) }), { error: true });
@@ -68,6 +75,14 @@
     const replaced = openRounds.filter((i) => isGenerated(plan.rounds[i])).length;
     if (replaced > 0 && !confirm(t('regenerateConfirm', { n: openRounds.length }))) return;
     run(openRounds);
+  }
+
+  function optimiseAll() {
+    if (openRounds.length === 0) {
+      showToast(t('nothingToGenerate'));
+      return;
+    }
+    run(openRounds, { fromCurrent: true });
   }
 
   // ---- manual swaps: tap one player, then a player in another team of the same round
@@ -122,6 +137,7 @@
   // ---- plan actions
 
   let shareOpen = $state(false);
+  let pairsOpen = $state(false);
   let settingsOpen = $state(false);
   let draftName = $state('');
   let draftSettings = $state<PlanSettings>(untrack(() => clone(plan.settings)));
@@ -185,11 +201,18 @@
       </div>
       <p>{t('statsPlayed', { u: stats.uniquePairs, t: stats.totalPairs })}</p>
       <ul class="facts muted small">
-        <li>{t('statsMissing', { n: stats.missingPairs })}</li>
-        {#each repeated as [k, n] (k)}
-          <li>{t('statsRepeated', { n, k })}</li>
+        {#each pairLines as line (line.k)}
+          <li>{line.text}{#if line.names}: <span class="pairs">{line.names}</span>{/if}</li>
         {/each}
       </ul>
+      <button class="small" onclick={() => (pairsOpen = true)}><Icon name="users" size={18} />{t('whoWithWhom')}</button>
+    </section>
+  {/if}
+
+  {#if adjustedRounds.length > 0}
+    <section class="notice warn stack">
+      <p>{t('adjustedNotice', { rounds: adjustedRounds.map((i) => t('round', { n: i + 1 })).join(', ') })}</p>
+      <button class="primary" onclick={optimiseAll}><Icon name="refresh" />{t('optimiseAll')}</button>
     </section>
   {/if}
 
@@ -211,11 +234,13 @@
 
   <section class="card">
     <div class="row wrap">
+      <button onclick={optimiseAll} disabled={!anyGenerated}><Icon name="refresh" />{t('optimiseAll')}</button>
       <button onclick={addRound}><Icon name="plus" />{t('addRound')}</button>
       <button onclick={openSettings}><Icon name="settings" />{t('planSettings')}</button>
       <button onclick={sync}><Icon name="users" />{t('syncRoster')}</button>
       <button class="danger" onclick={remove}><Icon name="trash" />{t('delete')}</button>
     </div>
+    <p class="muted small">{t('optimiseAllHint')}</p>
   </section>
 </main>
 
@@ -241,6 +266,10 @@
     />
     <button onclick={sendText}><Icon name="text" />{t('shareText')}</button>
   </div>
+</Dialog>
+
+<Dialog bind:open={pairsOpen} title={t('whoWithWhom')}>
+  <PairOverview {plan} />
 </Dialog>
 
 <Dialog bind:open={settingsOpen} title={t('planSettings')}>
@@ -273,6 +302,9 @@
   .facts {
     margin: 0;
     padding-left: 1.2em;
+  }
+  .pairs {
+    color: var(--text);
   }
   .swap-hint {
     position: sticky;

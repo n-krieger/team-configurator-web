@@ -30,6 +30,8 @@ export interface Round {
   teams: string[][];
   /** Locked rounds are kept when generating; they still count for the pairings. */
   locked: boolean;
+  /** Attendance changed after generating; the teams were patched and should be optimised. */
+  adjusted?: boolean;
 }
 
 export interface PlanSettings {

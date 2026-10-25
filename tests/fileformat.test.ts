@@ -27,7 +27,7 @@ const plan: Plan = {
   roster,
   rounds: [
     { nTeams: 2, absent: [], teams: [['p1', 'p3'], ['p2', 'p4']], locked: true },
-    { nTeams: 2, absent: ['p2'], teams: [['p1', 'p4'], ['p3']], locked: false },
+    { nTeams: 2, absent: ['p2'], teams: [['p1', 'p4'], ['p3']], locked: false, adjusted: true },
     { nTeams: 3, absent: [], teams: [], locked: false },
   ],
   settings: { weights: { a: 100, b: 0.5, c: 2.5 }, restarts: 4, sameFitnessLimit: 8 },
